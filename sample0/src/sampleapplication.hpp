@@ -20,7 +20,7 @@
 #ifndef MANA_SAMPLEAPPLICATION_HPP
 #define MANA_SAMPLEAPPLICATION_HPP
 
-#include "engine.hpp"
+#include "xengine.hpp"
 
 #include <filesystem>
 #include <memory>
@@ -36,7 +36,7 @@
 
 #include <iostream>
 
-using namespace engine;
+using namespace xengine;
 
 // Helper function to create pak files from a specified directory, with hardcoded file name format.
 // In a real application the user would have to decide on a strategy on how / if to store split paks.
@@ -104,7 +104,7 @@ protected:
     void start() override {
 
         assetManager = std::make_unique<AssetManager>(*pack);
-        audioDevice = AudioDevice::createDevice(engine::OpenAL);
+        audioDevice = AudioDevice::createDevice(xengine::OpenAL);
 
         renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend), *renderDevice, *pack, {},
                                         *assetManager);

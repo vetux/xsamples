@@ -15,14 +15,7 @@ endif ()
 
 include(cmake/implot.cmake)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message("Debug Build")
-    add_compile_definitions("MANA_DEBUG_BUILD")
-else ()
-    message("Release Build")
-endif ()
-
 include(cmake/config.cmake)
+include(cmake/samples.cmake)
 
 add_compile_definitions(XENGINE_EXPORT=)
-include(cmake/samples.cmake)

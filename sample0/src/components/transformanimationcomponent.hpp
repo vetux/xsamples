@@ -24,8 +24,8 @@
 
 struct TransformAnimationComponent
 {
-    engine::Vec3f translation;
-    engine::Vec3f rotation;
+    xengine::Vec3f translation;
+    xengine::Vec3f rotation;
 };
 
 #endif //MANA_TRANSFORMANIMATIONCOMPONENT_HPP
