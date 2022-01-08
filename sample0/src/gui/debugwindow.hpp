@@ -173,6 +173,30 @@ public:
         ImGui::BeginTabBar("TabBar");
 
         if (ImGui::BeginTabItem("Rendering")) {
+            if(ImGui::TreeNode("Window")){
+                std::vector<std::string> modes;
+                std::vector<const char*> cModeStr;
+                for (auto &mode: videoModes) {
+                    std::string str = std::to_string(mode.width);
+                    str += "x";
+                    str += std::to_string(mode.height);
+                    str += "@";
+                    str += std::to_string(mode.refreshRate);
+                    str += "            "; // ImGui::ListBox seems to be bugged the items need to have a minimum length otherwise random chars are displayed
+
+                    modes.emplace_back(str);
+                    cModeStr.emplace_back((modes.end() - 1)->c_str());
+                }
+
+                ImGui::ListBox("",
+                               &selectedVideoMode,
+                               reinterpret_cast<const char *const *>(cModeStr.data()),
+                               cModeStr.size());
+                ImGui::Checkbox("Fullscreen", &fullscreen);
+
+                ImGui::TreePop();
+            }
+
             if (ImGui::TreeNode("Render Layers")) {
                 std::map<int, std::vector<std::reference_wrapper<LayerTreeItem>>> activeItems;
                 std::vector<std::reference_wrapper<LayerTreeItem>> inactiveItems;
@@ -237,27 +261,6 @@ public:
 
             if (fpsLimit < 0)
                 fpsLimit = 0;
-
-            std::vector<std::string> modes;
-            std::vector<const char*> cModeStr;
-            for (auto &mode: videoModes) {
-                std::string str = std::to_string(mode.width);
-                str += "x";
-                str += std::to_string(mode.height);
-                str += "@";
-                str += std::to_string(mode.refreshRate);
-                str += "            "; // ImGui::ListBox seems to be bugged the items need to have a minimum length otherwise random chars are displayed
-
-                modes.emplace_back(str);
-                cModeStr.emplace_back((modes.end() - 1)->c_str());
-            }
-
-            ImGui::ListBox("",
-                           &selectedVideoMode,
-                           reinterpret_cast<const char *const *>(cModeStr.data()),
-                           cModeStr.size());
-            ImGui::SameLine();
-            ImGui::Checkbox("Fullscreen", &fullscreen);
 
             ImGui::EndTabItem();
         }
