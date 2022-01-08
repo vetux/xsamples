@@ -19,3 +19,10 @@ include(cmake/config.cmake)
 include(cmake/samples.cmake)
 
 add_compile_definitions(XENGINE_EXPORT=)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message("Debug Build")
+else ()
+    message("Release Build")
+    add_compile_definitions("ENABLE_APPLICATION_EXCEPTION_HANDLER")
+endif ()
