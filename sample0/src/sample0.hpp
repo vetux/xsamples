@@ -264,7 +264,7 @@ protected:
             auto mode = mon->getSupportedVideoModes().at(debugWindow.getSelectedVideoMode());
             wnd.setMonitor(*mon, Recti({}, {mode.width, mode.height}), mode.refreshRate);
         } else {
-            wnd.setWindowed(); // Does not undo fullscreen on i3wm
+            wnd.setWindowed(); // Does not unset video-mode on i3wm, but destructing the window/display-manager will unset it.
         }
 
         wnd.swapBuffers();
