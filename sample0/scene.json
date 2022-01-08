@@ -1,0 +1,534 @@
+{
+  "name": "SampleScene",
+  "entities": {
+    "MainCamera": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "camera",
+          "cameraType": "perspective",
+          "nearClip": 0.1,
+          "farClip": 1000,
+          "fov": 60,
+          "aspectRatio": 1.0
+        },
+        {
+          "enabled": true,
+          "componentType": "script_mono",
+          "assembly": "/scripts/script.dll",
+          "nameSpace": "",
+          "className": "InputController",
+          "queue": 0
+        },
+        {
+          "enabled": true,
+          "componentType": "sync_mono"
+        },
+        {
+          "enabled": true,
+          "componentType": "audio_listener"
+        },
+        {
+          "enabled": true,
+          "componentType": "audio_source",
+          "audio": {
+            "bundle": "/audio/Farbro-Tectonic-Mono.wav",
+            "asset": ""
+          },
+          "play": false,
+          "loop": true
+        }
+      ]
+    },
+    "Plane": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 15,
+              "y": 0,
+              "z": -15
+            },
+            "rotation": {
+              "x": 15,
+              "y": 15,
+              "z": 44
+            },
+            "scale": {
+              "x": 10,
+              "y": 10,
+              "z": 10
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "mesh_render",
+          "castShadows": true,
+          "receiveShadows": true,
+          "mesh": {
+            "bundle": "/meshes/plane.obj",
+            "asset": "Plane"
+          },
+          "material": {
+            "bundle": "/materials/containermaterial.json",
+            "asset": ""
+          }
+        }
+      ]
+    },
+    "Skybox": {
+      "enabled": false,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "skybox",
+          "texture": {
+            "bundle": "/textures/skybox_sky.json",
+            "asset": ""
+          }
+        }
+      ]
+    },
+    "DirectionalLight": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 1,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "light",
+          "lightType": "directional",
+          "ambient": {
+            "r": 0.2,
+            "g": 0.2,
+            "b": 0.2
+          },
+          "diffuse": {
+            "r": 0.2,
+            "g": 0.2,
+            "b": 0.2
+          },
+          "specular": {
+            "r": 0.2,
+            "g": 0.2,
+            "b": 0.2
+          },
+          "direction": {
+            "x": -0.5,
+            "y": -0.5,
+            "z": 0
+          }
+        }
+      ]
+    },
+    "PointLight": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 5,
+              "y": 1,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "light",
+          "lightType": "point",
+          "ambient": {
+            "r": 0.2,
+            "g": 0.2,
+            "b": 0.2
+          },
+          "diffuse": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "specular": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "constant": 1,
+          "linear": 0.09,
+          "quadratic": 0.032
+        }
+      ]
+    },
+    "SpotLight": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 10,
+              "y": 1,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "light",
+          "lightType": "spot",
+          "ambient": {
+            "r": 0.2,
+            "g": 0.2,
+            "b": 0.2
+          },
+          "diffuse": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "specular": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "direction": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "constant": 1,
+          "linear": 0.09,
+          "quadratic": 0.032,
+          "cutOff": 10,
+          "outerCutOff": 14
+        }
+      ]
+    },
+    "Island": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": ""
+        }
+      ]
+    },
+    "grass": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": "Island"
+        },
+        {
+          "enabled": true,
+          "componentType": "mesh_render",
+          "castShadows": true,
+          "receiveShadows": true,
+          "mesh": {
+            "bundle": "/meshes/island.obj",
+            "asset": "1_grass"
+          },
+          "material": {
+            "bundle": "/materials/island_mat.json",
+            "asset": "grass"
+          }
+        }
+      ]
+    },
+    "leaves": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": "Island"
+        },
+        {
+          "enabled": true,
+          "componentType": "mesh_render",
+          "castShadows": true,
+          "receiveShadows": true,
+          "mesh": {
+            "bundle": "/meshes/island.obj",
+            "asset": "2_leaves"
+          },
+          "material": {
+            "bundle": "/materials/island_mat.json",
+            "asset": "leaves"
+          }
+        }
+      ]
+    },
+    "wood": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": "Island"
+        },
+        {
+          "enabled": true,
+          "componentType": "mesh_render",
+          "castShadows": true,
+          "receiveShadows": true,
+          "mesh": {
+            "bundle": "/meshes/island.obj",
+            "asset": "wood"
+          },
+          "material": {
+            "bundle": "/materials/island_mat.json",
+            "asset": "wood"
+          }
+        }
+      ]
+    },
+    "stone": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          },
+          "parent": "Island"
+        },
+        {
+          "enabled": true,
+          "componentType": "mesh_render",
+          "castShadows": true,
+          "receiveShadows": true,
+          "mesh": {
+            "bundle": "/meshes/island.obj",
+            "asset": "3_stone"
+          },
+          "material": {
+            "bundle": "/materials/island_mat.json",
+            "asset": "stone"
+          }
+        }
+      ]
+    },
+    "Sphere": {
+      "enabled": true,
+      "components": [
+        {
+          "enabled": true,
+          "componentType": "transform",
+          "transform": {
+            "position": {
+              "x": -15,
+              "y": 10,
+              "z": -15
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 10,
+              "y": 10,
+              "z": 10
+            }
+          },
+          "parent": ""
+        },
+        {
+          "enabled": true,
+          "componentType": "mesh_render",
+          "castShadows": true,
+          "receiveShadows": true,
+          "mesh": {
+            "bundle": "/meshes/sphere.fbx",
+            "asset": "Sphere"
+          },
+          "material": {
+            "bundle": "/materials/spherematerial.json",
+            "asset": ""
+          }
+        }
+      ]
+    }
+  }
+}

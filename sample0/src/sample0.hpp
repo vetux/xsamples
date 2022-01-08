@@ -82,31 +82,29 @@ static std::unique_ptr<PakArchive> loadPackArchive(const std::string &pakName, A
     return std::make_unique<PakArchive>(std::move(streams));
 }
 
-class SampleApplication : public Application, InputListener {
+class Sample0 : public Application, InputListener {
 public:
-    SampleApplication(int argc, char *argv[])
+    Sample0(int argc, char *argv[])
             : Application(argc,
                           argv,
-                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string())) {
+                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")) {
         window->setSwapInterval(0);
         renderDevice->getRenderer().renderClear(window->getRenderTarget(graphicsBackend), bgColor);
         window->swapBuffers();
 
         ren2d = std::make_unique<Renderer2D>(*renderDevice);
         drawLoadingScreen(0);
-
-        pack = loadPackArchive("assets", *archive);
     }
 
-    ~SampleApplication() override = default;
+    ~Sample0() override = default;
 
 protected:
     void start() override {
 
-        assetManager = std::make_unique<AssetManager>(*pack);
+        assetManager = std::make_unique<AssetManager>(*archive);
         audioDevice = AudioDevice::createDevice(xengine::OpenAL);
 
-        renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend), *renderDevice, *pack, {},
+        renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend), *renderDevice, *archive, {},
                                         *assetManager);
 
         renderSystem->getRenderer().addRenderPass(std::move(std::make_unique<ForwardPass>(*renderDevice)));
@@ -177,7 +175,7 @@ protected:
 
         auto &device = *renderDevice;
 
-        auto stream = pack->open("/scene.json");
+        auto stream = archive->open("/scene.json");
         ecs.getEntityManager() << JsonProtocol().deserialize(*stream);
 
         auto &entityManager = ecs.getEntityManager();
@@ -326,8 +324,6 @@ private:
     }
 
 private:
-    std::unique_ptr<PakArchive> pack;
-
     ECS ecs;
 
     Entity cameraEntity;

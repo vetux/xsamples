@@ -17,8 +17,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "sampleapplication.hpp"
+#include "sample0.hpp"
 
 int main(int argc, char *argv[]) {
-    return SampleApplication(argc, argv).loop();
+    return Sample0(argc, argv).loop();
 }

@@ -1,3 +1,6 @@
 [submodule "submodules/implot"]
 	path = submodules/implot
 	url = https://github.com/epezent/implot
+[submodule "submodules/assets"]
+	path = submodules/assets
+	url = https://github.com/xenotux/assets/
