@@ -88,6 +88,8 @@ public:
             : Application(argc,
                           argv,
                           std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")) {
+        imPlotContext = ImPlot::CreateContext();
+
         window->setSwapInterval(0);
         renderDevice->getRenderer().renderClear(window->getRenderTarget(graphicsBackend), bgColor);
         window->swapBuffers();
@@ -96,7 +98,9 @@ public:
         drawLoadingScreen(0);
     }
 
-    ~Sample0() override = default;
+    ~Sample0() override {
+        ImPlot::DestroyContext(imPlotContext);
+    };
 
 protected:
     void start() override {
@@ -352,6 +356,8 @@ private:
     std::unique_ptr<Renderer2D> ren2d;
 
     ColorRGBA bgColor = {38, 38, 38, 255};
+
+    ImPlotContext *imPlotContext = nullptr;
 };
 
 #endif //MANA_SAMPLEAPPLICATION_HPP
