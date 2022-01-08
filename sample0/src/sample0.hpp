@@ -240,6 +240,7 @@ protected:
         debugWindow.setDrawCalls(drawCalls);
         debugWindow.setPolyCount(renderSystem->getPolyCount());
         debugWindow.setFrameBufferSize(wnd.getFramebufferSize());
+        debugWindow.setVideoModes(display.getPrimaryMonitor()->getSupportedVideoModes());
 
         renderSystem->getRenderer().getCompositor().setLayers(debugWindow.getSelectedLayers());
         renderSystem->getRenderer().getGeometryBuffer().setSamples(debugWindow.getSamples());
@@ -257,6 +258,14 @@ protected:
         drawCalls = renderDevice->getRenderer().debugDrawCallRecordStop();
 
         fpsLimit = debugWindow.getFpsLimit();
+
+        if (debugWindow.getFullScreen()) {
+            auto mon = display.getPrimaryMonitor();
+            auto mode = mon->getSupportedVideoModes().at(debugWindow.getSelectedVideoMode());
+            wnd.setMonitor(*mon, Recti({}, {mode.width, mode.height}), mode.refreshRate);
+        } else {
+            wnd.setWindowed(); // Does not undo fullscreen on i3wm
+        }
 
         wnd.swapBuffers();
 
@@ -332,6 +341,8 @@ private:
 
     RenderSystem *renderSystem{};
     std::unique_ptr<AudioDevice> audioDevice;
+
+    int fullscreeenIndex = 0;
 
     bool showDebugWindow = false;
     DebugWindow debugWindow;
