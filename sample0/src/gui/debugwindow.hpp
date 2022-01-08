@@ -172,10 +172,10 @@ public:
 
         ImGui::BeginTabBar("TabBar");
 
-        if (ImGui::BeginTabItem("Rendering")) {
-            if(ImGui::TreeNode("Window")){
+        if (ImGui::BeginTabItem("Settings")) {
+            if (ImGui::TreeNode("Window")) {
                 std::vector<std::string> modes;
-                std::vector<const char*> cModeStr;
+                std::vector<const char *> cModeStr;
                 for (auto &mode: videoModes) {
                     std::string str = std::to_string(mode.width);
                     str += "x";
@@ -194,73 +194,75 @@ public:
                                cModeStr.size());
                 ImGui::Checkbox("Fullscreen", &fullscreen);
 
+                ImGui::InputInt("Swap Interval", &swapInterval);
+
+                if (swapInterval < 0)
+                    swapInterval = 0;
+
                 ImGui::TreePop();
             }
 
-            if (ImGui::TreeNode("Render Layers")) {
-                std::map<int, std::vector<std::reference_wrapper<LayerTreeItem>>> activeItems;
-                std::vector<std::reference_wrapper<LayerTreeItem>> inactiveItems;
-                std::vector<std::reference_wrapper<LayerTreeItem>> pinnedItems;
+            if (ImGui::TreeNode("Render Pipeline")) {
+                if (ImGui::TreeNode("Layers")) {
+                    std::map<int, std::vector<std::reference_wrapper<LayerTreeItem>>> activeItems;
+                    std::vector<std::reference_wrapper<LayerTreeItem>> inactiveItems;
+                    std::vector<std::reference_wrapper<LayerTreeItem>> pinnedItems;
 
-                for (auto &item: items) {
-                    if (item.pinned)
-                        pinnedItems.emplace_back(item);
-                    else if (item.active)
-                        activeItems[item.order].emplace_back(item);
-                    else
-                        inactiveItems.emplace_back(item);
-                }
+                    for (auto &item: items) {
+                        if (item.pinned)
+                            pinnedItems.emplace_back(item);
+                        else if (item.active)
+                            activeItems[item.order].emplace_back(item);
+                        else
+                            inactiveItems.emplace_back(item);
+                    }
 
-                if (ImGui::TreeNode("Active")) {
-                    int nodeIndex = 0;
-                    for (auto &pair: activeItems) {
-                        for (auto &item: pair.second)
+                    if (ImGui::TreeNode("Active")) {
+                        int nodeIndex = 0;
+                        for (auto &pair: activeItems) {
+                            for (auto &item: pair.second)
+                                drawLayerNode(nodeIndex++, item);
+                        }
+                        for (auto &item: pinnedItems) {
                             drawLayerNode(nodeIndex++, item);
+                        }
+                        ImGui::TreePop();
                     }
-                    for (auto &item: pinnedItems) {
-                        drawLayerNode(nodeIndex++, item);
+                    if (ImGui::TreeNode("Inactive")) {
+                        int nodeIndex = 0;
+                        for (auto &item: inactiveItems)
+                            drawLayerNode(nodeIndex++, item);
+                        ImGui::TreePop();
                     }
+
                     ImGui::TreePop();
                 }
-                if (ImGui::TreeNode("Inactive")) {
-                    int nodeIndex = 0;
-                    for (auto &item: inactiveItems)
-                        drawLayerNode(nodeIndex++, item);
-                    ImGui::TreePop();
-                }
+
+                int res[2];
+
+                res[0] = frameBufferSize.x;
+                res[1] = frameBufferSize.y;
+                ImGui::InputInt2("Framebuffer Resolution", res, ImGuiInputTextFlags_ReadOnly);
+
+                res[0] = (int) ((float) frameBufferSize.x * resScale);
+                res[1] = (int) ((float) frameBufferSize.y * resScale);
+                ImGui::InputInt2("Render Resolution", res, ImGuiInputTextFlags_ReadOnly);
+
+                ImGui::SliderFloat("Resolution Scale", &resScale, 0.1, 3, "%.1f");
+
+                ImGui::InputInt("MSAA Samples", &samples);
+                if (samples > maxSamples)
+                    samples = maxSamples;
+                else if (samples < 1)
+                    samples = 1;
+
+                ImGui::InputFloat("FPS Limit", &fpsLimit);
+
+                if (fpsLimit < 0)
+                    fpsLimit = 0;
 
                 ImGui::TreePop();
             }
-
-            ImGui::Separator();
-
-            int res[2];
-
-            res[0] = frameBufferSize.x;
-            res[1] = frameBufferSize.y;
-            ImGui::InputInt2("Framebuffer Resolution", res, ImGuiInputTextFlags_ReadOnly);
-
-            res[0] = (int) ((float) frameBufferSize.x * resScale);
-            res[1] = (int) ((float) frameBufferSize.y * resScale);
-            ImGui::InputInt2("Render Resolution", res, ImGuiInputTextFlags_ReadOnly);
-
-            ImGui::SliderFloat("Resolution Scale", &resScale, 0.1, 3, "%.1f");
-
-            ImGui::InputInt("MSAA Samples", &samples);
-            if (samples > maxSamples)
-                samples = maxSamples;
-            else if (samples < 1)
-                samples = 1;
-
-            ImGui::InputInt("Swap Interval", &swapInterval);
-
-            if (swapInterval < 0)
-                swapInterval = 0;
-
-            ImGui::InputFloat("FPS Limit", &fpsLimit);
-
-            if (fpsLimit < 0)
-                fpsLimit = 0;
 
             ImGui::EndTabItem();
         }
