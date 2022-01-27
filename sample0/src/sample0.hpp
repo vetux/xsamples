@@ -88,7 +88,7 @@ public:
             : Application(argc,
                           argv,
                           std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")),
-              gconstructor(*renderDevice),
+              gBuffer(*renderDevice),
               compositor(*renderDevice) {
         imPlotContext = ImPlot::CreateContext();
 
@@ -122,7 +122,7 @@ protected:
 
         pipeline = std::make_unique<DeferredPipeline>(*renderDevice,
                                                       *assetRenderManager,
-                                                      gconstructor,
+                                                      gBuffer,
                                                       chain,
                                                       compositor);
 
@@ -332,7 +332,7 @@ private:
     std::unique_ptr<AssetManager> assetManager;
     std::unique_ptr<AssetRenderManager> assetRenderManager;
 
-    GConstructor gconstructor;
+    GBuffer gBuffer;
     PassChain chain;
     Compositor compositor;
 
