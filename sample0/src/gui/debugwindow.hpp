@@ -31,111 +31,6 @@
 
 class DebugWindow {
 public:
-    struct LayerTreeItem {
-        LayerTreeItem() = default;
-
-        LayerTreeItem(int order, const Compositor::Layer &layer)
-                : order(order), layer(layer) {}
-
-        int order = 0;
-        bool active = true;
-        bool pinned = false;
-        Compositor::Layer layer;
-    };
-
-    void swapItems(int item0, int item1) {
-        auto bitem0 = items.at(item0);
-        auto bitem1 = items.at(item1);
-        bitem0.order = item1;
-        bitem1.order = item0;
-        items.at(item0) = bitem1;
-        items.at(item1) = bitem0;
-    }
-
-    void drawLayerNodeButtons(LayerTreeItem &item) {
-        if (!item.active) {
-            ImGui::SameLine();
-            if (ImGui::SmallButton(
-                    ("Enable###0_" + std::to_string(item.order)).c_str())) {
-                item.active = true;
-            }
-        } else if (!item.pinned) {
-            ImGui::SameLine();
-            if (ImGui::SmallButton(
-                    ("Disable###1_" + std::to_string(item.order)).c_str())) {
-                item.active = false;
-            }
-
-            ImGui::SameLine();
-            if (ImGui::SmallButton(
-                    ("Up###2_" + std::to_string(item.order)).c_str())) {
-                auto nIndex = item.order;
-
-                bool foundDeactivated = false;
-                //Decrement nIndex until it doesnt point to a deactivated item
-                while (true) {
-                    if (--nIndex < 0)
-                        nIndex = static_cast<int>(items.size() - 1);
-                    if (nIndex == item.order) {
-                        break;
-                    } else if (items.at(nIndex).active && !items.at(nIndex).pinned) {
-                        foundDeactivated = true;
-                        break;
-                    }
-                }
-
-                if (foundDeactivated)
-                    swapItems(nIndex, item.order);
-            }
-
-            ImGui::SameLine();
-            if (ImGui::SmallButton(
-                    ("Down###3_" + std::to_string(item.order)).c_str())) {
-                auto nIndex = item.order;
-
-                bool foundDeactivated = false;
-                //Increment nIndex until it doesnt point to a deactivated item
-                while (true) {
-                    if (++nIndex >= items.size())
-                        nIndex = 0;
-                    if (nIndex == item.order) {
-                        break;
-                    } else if (items.at(nIndex).active && !items.at(nIndex).pinned) {
-                        foundDeactivated = true;
-                        break;
-                    }
-                }
-
-                if (foundDeactivated)
-                    swapItems(nIndex, item.order);
-            }
-        }
-    }
-
-    void drawLayerNode(int nodeIndex, LayerTreeItem &item) {
-        if (ImGui::TreeNode((void *) (intptr_t) nodeIndex, "%s", item.layer.name.c_str())) {
-            drawLayerNodeButtons(item);
-
-            ImGui::Text("Color Texture: %s", item.layer.color.c_str());
-
-            if (!item.layer.depth.empty())
-                ImGui::Text("Depth Texture: %s", item.layer.depth.c_str());
-            else
-                ImGui::Text("No Depth Texture");
-
-            ImGui::Text("Depth Test:    %s",
-                        formatDepthTestMode(item.layer.depthTestMode).c_str());
-            ImGui::Text("Blend Source:  %s",
-                        formatBlendMode(item.layer.colorBlendModeSource).c_str());
-            ImGui::Text("Blend Destination: %s",
-                        formatBlendMode(item.layer.colorBlendModeDest).c_str());
-
-            ImGui::TreePop();
-        } else {
-            drawLayerNodeButtons(item);
-        }
-    }
-
     void drawFrameTimeGraph() {
         if (ImPlot::BeginPlot("Frame Graph")) {
             std::vector<float> x;
@@ -203,41 +98,6 @@ public:
             }
 
             if (ImGui::TreeNode("Render Pipeline")) {
-                if (ImGui::TreeNode("Layers")) {
-                    std::map<int, std::vector<std::reference_wrapper<LayerTreeItem>>> activeItems;
-                    std::vector<std::reference_wrapper<LayerTreeItem>> inactiveItems;
-                    std::vector<std::reference_wrapper<LayerTreeItem>> pinnedItems;
-
-                    for (auto &item: items) {
-                        if (item.pinned)
-                            pinnedItems.emplace_back(item);
-                        else if (item.active)
-                            activeItems[item.order].emplace_back(item);
-                        else
-                            inactiveItems.emplace_back(item);
-                    }
-
-                    if (ImGui::TreeNode("Active")) {
-                        int nodeIndex = 0;
-                        for (auto &pair: activeItems) {
-                            for (auto &item: pair.second)
-                                drawLayerNode(nodeIndex++, item);
-                        }
-                        for (auto &item: pinnedItems) {
-                            drawLayerNode(nodeIndex++, item);
-                        }
-                        ImGui::TreePop();
-                    }
-                    if (ImGui::TreeNode("Inactive")) {
-                        int nodeIndex = 0;
-                        for (auto &item: inactiveItems)
-                            drawLayerNode(nodeIndex++, item);
-                        ImGui::TreePop();
-                    }
-
-                    ImGui::TreePop();
-                }
-
                 int res[2];
 
                 res[0] = frameBufferSize.x;
@@ -260,6 +120,8 @@ public:
 
                 if (fpsLimit < 0)
                     fpsLimit = 0;
+
+                ImGui::Checkbox("Draw debug overlay", &drawDebug);
 
                 ImGui::TreePop();
             }
@@ -290,79 +152,6 @@ public:
                     polyCount);
 
         ImGui::End();
-    }
-
-    std::vector<Compositor::Layer> getSelectedLayers() const {
-        std::vector<Compositor::Layer> pin;
-        std::map<int, std::vector<Compositor::Layer>> tmp;
-        for (auto &item: items)
-            if (item.active) {
-                if (item.pinned) {
-                    pin.emplace_back(item.layer);
-                } else {
-                    tmp[item.order].emplace_back(item.layer);
-                }
-            }
-
-        std::vector<Compositor::Layer> ret;
-        for (auto &pair: tmp)
-            for (auto &layer: pair.second)
-                ret.emplace_back(layer);
-        for (auto &layer: pin)
-            ret.emplace_back(layer);
-        return ret;
-    }
-
-    void resetSelection() {
-        int i = 0;
-        for (auto &item: items) {
-            item.order = i++;
-            item.active = true;
-        }
-    }
-
-    void setLayers(const std::vector<Compositor::Layer> &l) {
-        items.clear();
-        int i = 0;
-        for (auto &layer: l) {
-            items.emplace_back(LayerTreeItem(i++, static_cast<Compositor::Layer>(layer)));
-        }
-    }
-
-    void setLayerActive(const std::string &name, bool active) {
-        for (auto &item: items) {
-            if (item.layer.name == name) {
-                item.active = active;
-                break;
-            }
-        }
-    }
-
-    bool getLayerActive(const std::string &name) const {
-        for (auto &item: items) {
-            if (item.layer.name == name) {
-                return item.active;
-            }
-        }
-        throw std::runtime_error("Invalid layer " + name);
-    }
-
-    void setLayerPinned(const std::string &name, bool pin) {
-        for (auto &item: items) {
-            if (item.layer.name == name) {
-                item.pinned = pin;
-                break;
-            }
-        }
-    }
-
-    bool getLayerPinned(const std::string &name) const {
-        for (auto &item: items) {
-            if (item.layer.name == name) {
-                return item.pinned;
-            }
-        }
-        throw std::runtime_error("Invalid layer " + name);
     }
 
     void setSamples(int value) {
@@ -429,12 +218,11 @@ public:
         return fullscreen;
     }
 
-private:
-    std::string appendButtonLabelId(const std::string &label, int index) {
-        return label + "###" + std::to_string(index);
+    bool getDrawDebug() {
+        return drawDebug;
     }
 
-    std::vector<LayerTreeItem> items;
+private:
     int maxSamples = 0;
     int samples = 0;
     int swapInterval = 0;
@@ -447,6 +235,7 @@ private:
     std::vector<VideoMode> videoModes;
     int selectedVideoMode = 0;
     bool fullscreen = false;
+    bool drawDebug = false;
 
     std::vector<float> frameRateHistory;
     std::vector<float> frameTimeHistory;

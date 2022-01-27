@@ -87,14 +87,17 @@ public:
     Sample0(int argc, char *argv[])
             : Application(argc,
                           argv,
-                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")) {
+                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")),
+              gconstructor(*renderDevice),
+              compositor(*renderDevice) {
         imPlotContext = ImPlot::CreateContext();
 
         window->setSwapInterval(0);
-        renderDevice->getRenderer().renderClear(window->getRenderTarget(graphicsBackend), bgColor);
+        renderDevice->getRenderer().renderClear(window->getRenderTarget(graphicsBackend), bgColor, 1);
         window->swapBuffers();
 
         ren2d = std::make_unique<Renderer2D>(*renderDevice);
+
         drawLoadingScreen(0);
     }
 
@@ -104,24 +107,35 @@ public:
 
 protected:
     void start() override {
-
         assetManager = std::make_unique<AssetManager>(*archive);
+        assetRenderManager = std::make_unique<AssetRenderManager>(*assetManager, renderDevice->getAllocator());
+
+        drawLoadingScreen(0.1);
+        chain.passes.emplace_back(std::move(std::make_unique<SkyboxPass>(*renderDevice)));
+        drawLoadingScreen(0.2);
+        chain.passes.emplace_back(std::move(std::make_unique<PhongPass>(*renderDevice)));
+        drawLoadingScreen(0.3);
+        chain.passes.emplace_back(std::move(std::make_unique<ForwardPass>(*renderDevice)));
+        drawLoadingScreen(0.4);
+        chain.passes.emplace_back(std::move(std::make_unique<DebugPass>(*renderDevice)));
+        drawLoadingScreen(0.5);
+
+        pipeline = std::make_unique<DeferredPipeline>(*renderDevice,
+                                                      *assetRenderManager,
+                                                      gconstructor,
+                                                      chain,
+                                                      compositor);
+
+        drawLoadingScreen(0.6);
+
         audioDevice = AudioDevice::createDevice(xengine::OpenAL);
 
-        renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend), *renderDevice, *archive, {},
-                                        *assetManager);
-
-        renderSystem->getRenderer().addRenderPass(std::move(std::make_unique<ForwardPass>(*renderDevice)));
-        drawLoadingScreen(0.1);
-        renderSystem->getRenderer().addRenderPass(std::move(std::make_unique<PrePass>(*renderDevice)));
-        drawLoadingScreen(0.2);
-        renderSystem->getRenderer().addRenderPass(
-                std::move(std::make_unique<PhongShadePass>(*renderDevice)));
-        drawLoadingScreen(0.3);
-        renderSystem->getRenderer().addRenderPass(std::move(std::make_unique<SkyboxPass>(*renderDevice)));
-        drawLoadingScreen(0.4);
-        renderSystem->getRenderer().addRenderPass(std::move(std::make_unique<DebugPass>(*renderDevice)));
-        drawLoadingScreen(0.5);
+        renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend),
+                                        *renderDevice,
+                                        *archive,
+                                        *assetManager,
+                                        *assetRenderManager,
+                                        *pipeline);
 
         //Move is required because the ECS destructor deletes the system pointers.
         ecs = std::move(ECS(
@@ -136,46 +150,9 @@ protected:
 
         drawLoadingScreen(0.7);
 
-        std::vector<Compositor::Layer> layers = {
-                {"Skybox",         SkyboxPass::COLOR,        "",             DEPTH_TEST_ALWAYS},
-                {"PhongShading",   PhongShadePass::COMBINED, PrePass::DEPTH, DEPTH_TEST_ALWAYS},
-                {"Forward",        ForwardPass::COLOR,       ForwardPass::DEPTH},
-                {"Phong Ambient",  PhongShadePass::AMBIENT,  "",             DEPTH_TEST_ALWAYS},
-                {"Phong Diffuse",  PhongShadePass::DIFFUSE,  "",             DEPTH_TEST_ALWAYS},
-                {"Phong Specular", PhongShadePass::SPECULAR, "",             DEPTH_TEST_ALWAYS},
-                {"Normal Vectors", DebugPass::NORMALS,       "",             DEPTH_TEST_ALWAYS},
-                {"Wireframe",      DebugPass::WIREFRAME,     "",             DEPTH_TEST_ALWAYS},
-                {"Lights",         DebugPass::LIGHTS,        "",             DEPTH_TEST_ALWAYS},
-                {"Depth",          PrePass::DEPTH,           "",             DEPTH_TEST_ALWAYS},
-                {"Position",       PrePass::POSITION,        "",             DEPTH_TEST_ALWAYS},
-                {"Normal",         PrePass::NORMAL,          "",             DEPTH_TEST_ALWAYS},
-                {"Diffuse",        PrePass::DIFFUSE,         "",             DEPTH_TEST_ALWAYS},
-                {"Ambient",        PrePass::AMBIENT,         "",             DEPTH_TEST_ALWAYS},
-                {"Specular",       PrePass::SPECULAR,        "",             DEPTH_TEST_ALWAYS},
-                {"Shininess",      PrePass::SHININESS_ID,    "",             DEPTH_TEST_ALWAYS}
-        };
-
-        renderSystem->getRenderer().getCompositor().setLayers(layers);
-
-        debugWindow.setLayers(layers);
-
         int maxSamples = renderDevice->getMaxSampleCount();
         debugWindow.setMaxSamples(maxSamples);
         debugWindow.setSamples(1);
-
-        debugWindow.setLayerActive("Phong Ambient", false);
-        debugWindow.setLayerActive("Phong Diffuse", false);
-        debugWindow.setLayerActive("Phong Specular", false);
-        debugWindow.setLayerActive("Normal Vectors", false);
-        debugWindow.setLayerActive("Wireframe", false);
-        debugWindow.setLayerActive("Lights", false);
-        debugWindow.setLayerActive("Depth", false);
-        debugWindow.setLayerActive("Position", false);
-        debugWindow.setLayerActive("Normal", false);
-        debugWindow.setLayerActive("Diffuse", false);
-        debugWindow.setLayerActive("Ambient", false);
-        debugWindow.setLayerActive("Specular", false);
-        debugWindow.setLayerActive("Shininess", false);
 
         auto &device = *renderDevice;
 
@@ -246,9 +223,8 @@ protected:
         debugWindow.setFrameBufferSize(wnd.getFramebufferSize());
         debugWindow.setVideoModes(display.getPrimaryMonitor()->getSupportedVideoModes());
 
-        renderSystem->getRenderer().getCompositor().setLayers(debugWindow.getSelectedLayers());
-        renderSystem->getRenderer().getGeometryBuffer().setSamples(debugWindow.getSamples());
-        renderSystem->getRenderer().getGeometryBuffer().setSize(debugWindow.getRenderResolution());
+        pipeline->getGeometryBuffer().setSamples(debugWindow.getSamples());
+        pipeline->getGeometryBuffer().setSize(debugWindow.getRenderResolution());
 
         wnd.setSwapInterval(debugWindow.getSwapInterval());
 
@@ -258,6 +234,8 @@ protected:
 
         if (showDebugWindow)
             drawDebugWindow();
+
+        dynamic_cast<DebugPass &>(*(chain.passes.end() - 1)->get()).setEnabled(debugWindow.getDrawDebug());
 
         drawCalls = renderDevice->getRenderer().debugDrawCallRecordStop();
 
@@ -332,7 +310,7 @@ private:
         ImGui::Render();
         ImGuiCompat::DrawData(wnd,
                               target,
-                              RenderOptions({}, target.getSize(), true, {}, 1, false, false, false),
+                              RenderOptions({}, target.getSize(), false, false, 1, {}, 1, false, false, false),
                               graphicsBackend);
     }
 
@@ -352,7 +330,13 @@ private:
     DebugWindow debugWindow;
 
     std::unique_ptr<AssetManager> assetManager;
+    std::unique_ptr<AssetRenderManager> assetRenderManager;
 
+    GConstructor gconstructor;
+    PassChain chain;
+    Compositor compositor;
+
+    std::unique_ptr<DeferredPipeline> pipeline;
     std::unique_ptr<Renderer2D> ren2d;
 
     ColorRGBA bgColor = {38, 38, 38, 255};
