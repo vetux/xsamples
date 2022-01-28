@@ -87,9 +87,7 @@ public:
     Sample0(int argc, char *argv[])
             : Application(argc,
                           argv,
-                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")),
-              gBuffer(*renderDevice),
-              compositor(*renderDevice) {
+                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")) {
         imPlotContext = ImPlot::CreateContext();
 
         window->setSwapInterval(0);
@@ -110,21 +108,20 @@ protected:
         assetManager = std::make_unique<AssetManager>(*archive);
         assetRenderManager = std::make_unique<AssetRenderManager>(*assetManager, renderDevice->getAllocator());
 
+        std::vector<std::unique_ptr<RenderPass>> passes;
         drawLoadingScreen(0.1);
-        chain.passes.emplace_back(std::move(std::make_unique<SkyboxPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_unique<SkyboxPass>(*renderDevice)));
         drawLoadingScreen(0.2);
-        chain.passes.emplace_back(std::move(std::make_unique<PhongPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_unique<PhongPass>(*renderDevice)));
         drawLoadingScreen(0.3);
-        chain.passes.emplace_back(std::move(std::make_unique<ForwardPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_unique<ForwardPass>(*renderDevice)));
         drawLoadingScreen(0.4);
-        chain.passes.emplace_back(std::move(std::make_unique<DebugPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_unique<DebugPass>(*renderDevice)));
         drawLoadingScreen(0.5);
 
         pipeline = std::make_unique<DeferredPipeline>(*renderDevice,
-                                                      *assetRenderManager,
-                                                      gBuffer,
-                                                      chain,
-                                                      compositor);
+                                                      *assetManager,
+                                                      std::move(passes));
 
         drawLoadingScreen(0.6);
 
@@ -235,7 +232,7 @@ protected:
         if (showDebugWindow)
             drawDebugWindow();
 
-        dynamic_cast<DebugPass &>(*(chain.passes.end() - 1)->get()).setEnabled(debugWindow.getDrawDebug());
+        dynamic_cast<DebugPass &>(*(pipeline->getPasses().end() - 1)->get()).setEnabled(debugWindow.getDrawDebug());
 
         drawCalls = renderDevice->getRenderer().debugDrawCallRecordStop();
 
@@ -331,10 +328,6 @@ private:
 
     std::unique_ptr<AssetManager> assetManager;
     std::unique_ptr<AssetRenderManager> assetRenderManager;
-
-    GBuffer gBuffer;
-    PassChain chain;
-    Compositor compositor;
 
     std::unique_ptr<DeferredPipeline> pipeline;
     std::unique_ptr<Renderer2D> ren2d;
