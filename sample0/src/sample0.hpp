@@ -24,6 +24,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <fstream>
 
 #include "systems/playerinputsystem.hpp"
 #include "components/playercontrollercomponent.hpp"
