@@ -25,7 +25,7 @@
 #include "imgui.h"
 #include "implot.h"
 
-#include "platform/display/window.hpp"
+#include "display/window.hpp"
 
 #include "gui/stringformat.hpp"
 
