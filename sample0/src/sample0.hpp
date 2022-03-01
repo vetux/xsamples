@@ -121,7 +121,6 @@ protected:
         drawLoadingScreen(0.5);
 
         pipeline = std::make_unique<DeferredPipeline>(*renderDevice,
-                                                      *assetManager,
                                                       std::move(passes));
 
         drawLoadingScreen(0.6);
