@@ -96,8 +96,6 @@ public:
         window->swapBuffers();
 
         ren2d = std::make_unique<Renderer2D>(*renderDevice);
-
-        drawLoadingScreen(0);
     }
 
     ~Sample0() override {
@@ -106,24 +104,31 @@ public:
 
 protected:
     void start() override {
+        {
+            auto s = archive->open("fonts/roboto/Roboto-Regular.ttf");
+            font = Font::createFont(*s);
+        }
+
+        textRenderer = std::make_unique<TextRenderer>(*font, *renderDevice);
+
         assetManager = std::make_unique<AssetManager>(*archive);
         assetRenderManager = std::make_unique<AssetRenderManager>(*assetManager, renderDevice->getAllocator());
 
         std::vector<std::unique_ptr<RenderPass>> passes;
-        drawLoadingScreen(0.1);
+        drawLoadingScreen(0.1, "Loading Passes...");
         passes.emplace_back(std::move(std::make_unique<SkyboxPass>(*renderDevice)));
-        drawLoadingScreen(0.2);
+        drawLoadingScreen(0.2, "Loading Passes...");
         passes.emplace_back(std::move(std::make_unique<PhongPass>(*renderDevice)));
-        drawLoadingScreen(0.3);
+        drawLoadingScreen(0.3, "Loading Passes...");
         passes.emplace_back(std::move(std::make_unique<ForwardPass>(*renderDevice)));
-        drawLoadingScreen(0.4);
+        drawLoadingScreen(0.4, "Loading Passes...");
         passes.emplace_back(std::move(std::make_unique<DebugPass>(*renderDevice)));
-        drawLoadingScreen(0.5);
+        drawLoadingScreen(0.5, "Loading Passes...");
 
         pipeline = std::make_unique<DeferredPipeline>(*renderDevice,
                                                       std::move(passes));
 
-        drawLoadingScreen(0.6);
+        drawLoadingScreen(0.6, "Initializing Systems...");
 
         audioDevice = AudioDevice::createDevice(xengine::OpenAL);
 
@@ -145,7 +150,7 @@ protected:
         ));
         ecs.start();
 
-        drawLoadingScreen(0.7);
+        drawLoadingScreen(0.7, "Loading Scene...");
 
         int maxSamples = renderDevice->getMaxSampleCount();
         debugWindow.setMaxSamples(maxSamples);
@@ -176,7 +181,7 @@ protected:
                                                                             {7.151281, 61.985, 24.78}});
         window->getInput().addListener(*this);
 
-        drawLoadingScreen(1);
+        drawLoadingScreen(1, "Loading Finished!");
 
         Application::start();
     }
@@ -269,7 +274,7 @@ private:
 
     void onKeyUp(KeyboardKey key) override {}
 
-    void drawLoadingScreen(float progress) {
+    void drawLoadingScreen(float progress, const std::string &loadingText = "Loading...") {
         if (progress > 1)
             progress = 1;
         else if (progress < 0)
@@ -280,19 +285,40 @@ private:
         auto &target = window->getRenderTarget(graphicsBackend);
 
         ren2d->renderBegin(target, true, {}, target.getSize(), bgColor);
-        ren2d->setProjection({{-1, -1},
-                              {1,  1}});
-        float xdim = 0.5;
-        float ydim = 0.05;
-        ren2d->draw(Rectf({-xdim / 2, -ydim / 2}, {xdim, ydim}),
-                    ColorRGBA(71, 71, 71, 255),
+
+        auto targetSize = target.getSize();
+        auto targetHalfSize = targetSize / 2;
+
+        auto barBgColor = ColorRGBA(71, 71, 71, 255);
+        auto barFgColor = ColorRGBA(119, 255, 74, 255);
+        auto textColor = ColorRGBA(255, 255, 255, 255);
+
+        // Draw background bar
+        Vec2f barSize(400, 50);
+        Vec2f halfBarSize = barSize / 2;
+        Vec2f pos = targetHalfSize.convert<float>() - halfBarSize + Vec2f(0, 100);
+        ren2d->draw(Rectf(pos, barSize),
+                    barBgColor,
                     true);
-        float xpos = -xdim / 2 * progress;
-        float xscaledim = xdim * progress;
-        xpos -= (xdim - xscaledim) / 2;
-        ren2d->draw(Rectf({xpos, -ydim / 2}, {xscaledim, ydim}),
-                    ColorRGBA(119, 255, 74, 255),
+
+        // Draw foreground bar
+        Vec2f fgBarSize(barSize.x * progress, barSize.y);
+        ren2d->draw(Rectf(pos, fgBarSize),
+                    barFgColor,
                     true);
+
+        ren2d->renderPresent();
+
+        textRenderer->setFontSize(Vec2i(40, 0));
+        auto text = textRenderer->render(loadingText, 50);
+        auto textSize = text.getTexture().getAttributes().size;
+        auto textHalfSize = textSize / 2;
+        auto textPos = targetHalfSize - textHalfSize - Vec2i(0, 0);
+
+        auto dstRect = Rectf(textPos.convert<float>(), textSize.convert<float>());
+
+        ren2d->renderBegin(target, false);
+        ren2d->draw(text, dstRect, textColor);
         ren2d->renderPresent();
 
         window->swapBuffers();
@@ -335,6 +361,9 @@ private:
     ColorRGBA bgColor = {38, 38, 38, 255};
 
     ImPlotContext *imPlotContext = nullptr;
+
+    std::unique_ptr<Font> font;
+    std::unique_ptr<TextRenderer> textRenderer;
 };
 
 #endif //MANA_SAMPLEAPPLICATION_HPP

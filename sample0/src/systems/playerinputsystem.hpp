@@ -41,11 +41,10 @@ public:
         for (auto &pair: componentManager.getPool<PlayerControllerComponent>()) {
             auto transform = componentManager.lookup<TransformComponent>(pair.first);
 
-            // Unit vectors point to the opposite because
-            // the camera is facing in the negative z although positive z is "forward" in world space.
-            Vec3f forward = transform.transform.rotate(Vec3f(0, 0, -1));
-            Vec3f left = transform.transform.rotate(Vec3f(-1, 0, 0));
-            Vec3f up = transform.transform.rotate(Vec3f(0, 1, 0));
+            // Invert forward vector because camera is facing in the negative z
+            Vec3f forward = transform.transform.forward() * -1;
+            Vec3f left = transform.transform.left();
+            Vec3f up = transform.transform.up();
 
             Vec3f relativeMovement = forward * movement.z + left * movement.x + up * movement.y;
 
@@ -56,16 +55,14 @@ public:
             if (input.getKeyboards().at(0).getKey(KeyboardKey::KEY_LSHIFT))
                 movementScale = 5.0f;
 
+            auto worldMov = relativeMovement * pair.second.movementSpeed * movementScale * deltaTime;
+
             //Apply the world movement
-            transform.transform.setPosition(transform.transform.getPosition()
-                                            + relativeMovement * pair.second.movementSpeed * movementScale * deltaTime);
+            transform.transform.setPosition(transform.transform.getPosition() + worldMov);
 
             //Apply the world rotation by converting it to a quaternion and using it as multiplier
-            transform.transform.setRotation(transform.transform.getRotation()
-                                            * Quaternion(worldRot * pair.second.rotationSpeed * deltaTime));
-            //Apply the local rotation by converting it to a quaternion and using the existing rotation as multiplier
-            transform.transform.setRotation(Quaternion(localRot * pair.second.rotationSpeed * deltaTime)
-                                            * transform.transform.getRotation());
+            transform.transform.applyRotation(Quaternion(worldRot * pair.second.rotationSpeed * deltaTime), true);
+            transform.transform.applyRotation(Quaternion(localRot * pair.second.rotationSpeed * deltaTime));
 
             componentManager.update<TransformComponent>(pair.first, transform);
         }
@@ -80,7 +77,7 @@ private:
 
     double deadzone = 0.1f;
 
-    double applyDeadzone(double value) const {
+    float applyDeadzone(float value) const {
         if (value < deadzone && value > -deadzone) {
             return 0;
         } else {
@@ -88,8 +85,8 @@ private:
         }
     }
 
-    Vec3d getMovementInput() {
-        Vec3d ret;
+    Vec3f getMovementInput() {
+        Vec3f ret;
         auto kb = input.getKeyboards().at(0);
         if (kb.getKey(KEY_W))
             ret.z = 1;
@@ -117,8 +114,8 @@ private:
         return normalize(ret);
     }
 
-    Vec3d getRotationInput() {
-        Vec3d ret;
+    Vec3f getRotationInput() {
+        Vec3f ret;
 
         auto kb = input.getKeyboards().at(0);
         if (kb.getKey(KEY_UP))
