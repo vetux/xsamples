@@ -49,7 +49,7 @@ protected:
         auto &mouse = window->getInput().getMice().begin()->second;
         if (mouse.getButton(xengine::LEFT)
             && mouse.position.x > guiWidth + 10) {
-            viewRotation = (Quaternion(Vec3f(-mouseDelta.y, -mouseDelta.x, 0))
+            viewRotation = (Quaternion(Vec3f(-mouseDelta.y * 50 * deltaTime, -mouseDelta.x * 50 * deltaTime, 0))
                             * Quaternion(viewRotation)).getEulerAngles();
         }
         mouseDelta = {};
