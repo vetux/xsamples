@@ -18,3 +18,7 @@
  */
 
 #include "assetexplorer.hpp"
+
+int main(int argc, char *argv[]) {
+    return AssetExplorer(argc, argv).loop();
+}
