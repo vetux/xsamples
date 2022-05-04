@@ -22,24 +22,40 @@
 #include <fstream>
 #include <filesystem>
 
-#include "app/application.hpp"
-
-#include "asset/assetimporter.hpp"
-
-#include "compat/imguicompat.hpp"
+#include "xengine.hpp"
 
 using namespace xengine;
 
-class AssetExplorer : public Application {
+class AssetExplorer : public Application, InputListener {
 public:
     AssetExplorer(int argc, char *argv[])
             : Application(argc, argv) {
         window->setTitle("Asset Explorer");
+        auto passes = std::vector<std::unique_ptr<RenderPass>>();
+        passes.emplace_back(new PhongPass(*renderDevice));
+        pipeline = std::make_unique<DeferredPipeline>(*renderDevice, std::move(passes));
+
+        pipeline->getCompositor().setClearColor(ColorRGBA::grey(0.5, 255));
+
+        window->getInput().addListener(*this);
+    }
+
+    ~AssetExplorer() {
+        window->getInput().removeListener(*this);
     }
 
 protected:
     void update(float deltaTime) override {
+        auto &mouse = window->getInput().getMice().begin()->second;
+        if (mouse.getButton(xengine::LEFT)
+            && mouse.position.x > guiWidth + 10) {
+            viewRotation.x -= deltaTime * mouseDelta.y * 50;
+            viewRotation.y -= deltaTime * mouseDelta.x * 50;
+        }
+
+        drawViewport();
         drawGui();
+
         Application::update(deltaTime);
     }
 
@@ -71,8 +87,6 @@ private:
         auto &target = window->getRenderTarget(graphicsBackend);
         auto &ren = renderDevice->getRenderer();
 
-        ren.renderClear(target, ColorRGBA::black(), 1);
-
         ImGui::StyleColorsDark();
 
         ImGuiCompat::NewFrame(wnd, graphicsBackend);
@@ -80,7 +94,12 @@ private:
 
         ImGui::Begin("Contents", nullptr, ImGuiWindowFlags_NoMove);
 
-        ImGui::SetWindowSize({ImGui::GetWindowSize().x, (float) target.getSize().y});
+        if (guiWidth > target.getSize().x)
+            guiWidth = target.getSize().x;
+        else
+            guiWidth = ImGui::GetWindowSize().x;
+
+        ImGui::SetWindowSize({guiWidth, (float) target.getSize().y});
         ImGui::SetWindowPos({0, 0});
 
         bool loadAsset = ImGui::Button("Reload Asset");
@@ -95,13 +114,16 @@ private:
             std::ifstream stream(path);
             if (stream.is_open()) {
                 bundle = AssetImporter::import(stream, std::filesystem::path(path).extension());
+                if (bundle.assets.find(typeid(Mesh)) != bundle.assets.end()) {
+                    mesh = renderDevice->getAllocator().createMeshBuffer(bundle.get<Mesh>());
+                }
             }
         }
 
         for (auto &pair: bundle.assets) {
             auto t = getType(pair.first);
             for (auto &mPair: pair.second) {
-                drawNode(t, mPair.first);
+                drawNode(t, mPair.first, *mPair.second.front());
             }
         }
 
@@ -115,9 +137,8 @@ private:
                               graphicsBackend);
     }
 
-    void drawNode(AssetType type, const std::string &text) {
+    void drawNode(AssetType type, const std::string &text, Asset &asset) {
         if (ImGui::TreeNode(text.c_str())) {
-            ImGui::SameLine();
             std::string str;
             switch (type) {
                 case UNKNOWN:
@@ -137,15 +158,77 @@ private:
                     break;
             }
             ImGui::Text("%s", str.c_str());
+
+            switch (type) {
+                case MESH:
+                    if (ImGui::Button("Display Mesh")) {
+                        mesh = renderDevice->getAllocator().createMeshBuffer(dynamic_cast<const Mesh &>(asset));
+                    }
+                    break;
+            }
+
             ImGui::TreePop();
+        }
+    }
+
+    void drawViewport() {
+        auto winSize = window->getRenderTarget(graphicsBackend).getSize();
+        auto aspectRatio = (float) winSize.x / (float) winSize.y;
+
+        Scene s;
+        s.camera.type = xengine::PERSPECTIVE;
+        s.camera.transform.setPosition({0, 0, viewDistance});
+        s.camera.aspectRatio = aspectRatio;
+
+        s.skybox.color = ColorRGBA::blue();
+
+        auto light = Light(LightType::LIGHT_DIRECTIONAL);
+        light.direction = {0, 0, -1.0f};
+        light.ambient = Vec3f(0.5f);
+        s.lights.emplace_back(light);
+
+        if (mesh) {
+            Material mat;
+            mat.diffuse = ColorRGBA::white(0.1);
+            s.nodes.emplace_back(Scene::Node({{}, viewRotation, {1, 1, 1}}, mesh.get(), mat));
+        }
+
+        pipeline->getGeometryBuffer().setSamples(4);
+        pipeline->getGeometryBuffer().setSize(window->getRenderTarget(graphicsBackend).getSize());
+
+        pipeline->render(window->getRenderTarget(graphicsBackend), s);
+    }
+
+    void onMouseMove(double xPos, double yPos) override {
+        auto &input = window->getInput();
+        auto &mouse = input.getMice().begin()->second;
+        mouseDelta = Vec2d(prevMousePos.x - xPos, prevMousePos.y - yPos);
+        prevMousePos = {xPos, yPos};
+    }
+
+    void onMouseWheelScroll(double amount) override {
+        viewDistance -= amount;
+        if (viewDistance < 1) {
+            viewDistance = 1;
+        } else if (viewDistance > 10000) {
+            viewDistance = 10000;
         }
     }
 
     std::string path;
     AssetBundle bundle;
 
-    AssetType type;
-    size_t index;
+    float guiWidth;
+
+    std::unique_ptr<MeshBuffer> mesh;
+
+    Vec3f viewRotation;
+    float viewDistance = 10;
+
+    Vec2d mouseDelta;
+    Vec2d prevMousePos;
+
+    std::unique_ptr<DeferredPipeline> pipeline;
 };
 
 #endif //XSAMPLES_ASSETEXPLORER_HPP
