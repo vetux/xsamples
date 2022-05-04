@@ -87,8 +87,8 @@ class Sample0 : public Application, InputListener {
 public:
     Sample0(int argc, char *argv[])
             : Application(argc,
-                          argv,
-                          std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")) {
+                          argv),
+                          archive(std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")){
         imPlotContext = ImPlot::CreateContext();
 
         window->setSwapInterval(0);
@@ -210,10 +210,6 @@ protected:
         auto &entityManager = ecs.getEntityManager();
         auto &componentManager = entityManager.getComponentManager();
 
-        auto cam = componentManager.lookup<CameraComponent>(cameraEntity);
-        cam.camera.aspectRatio = (float) wndSize.x / (float) wndSize.y;
-        componentManager.update<CameraComponent>(cameraEntity, cam);
-
         if (deltaTime > 0) {
             float fps = 1.0f / deltaTime;
             float alpha = 0.9;
@@ -309,6 +305,7 @@ private:
 
         ren2d->renderPresent();
 
+        //Draw text
         textRenderer->setFontSize(Vec2i(40, 0));
         auto text = textRenderer->render(loadingText, 50);
         auto textSize = text.getTexture().getAttributes().size;
@@ -364,6 +361,8 @@ private:
 
     std::unique_ptr<Font> font;
     std::unique_ptr<TextRenderer> textRenderer;
+
+    std::unique_ptr<Archive> archive;
 };
 
 #endif //MANA_SAMPLEAPPLICATION_HPP
