@@ -49,8 +49,8 @@ protected:
         auto &mouse = window->getInput().getMice().begin()->second;
         if (mouse.getButton(xengine::LEFT)
             && mouse.position.x > guiWidth + 10) {
-            viewRotation.x -= deltaTime * mouseDelta.y * 50;
-            viewRotation.y -= deltaTime * mouseDelta.x * 50;
+            viewRotation = (Quaternion(Vec3f(-mouseDelta.y, -mouseDelta.x, 0))
+                            * Quaternion(viewRotation)).getEulerAngles();
         }
         mouseDelta = {};
 
@@ -158,6 +158,7 @@ private:
                     str = "AUDIO";
                     break;
             }
+
             ImGui::Text("%s", str.c_str());
 
             switch (type) {
@@ -166,6 +167,8 @@ private:
                         mesh = renderDevice->getAllocator().createMeshBuffer(dynamic_cast<const Mesh &>(asset));
                     }
                     break;
+                default:
+                    break;
             }
 
             ImGui::TreePop();
@@ -173,7 +176,8 @@ private:
     }
 
     void drawViewport() {
-        auto winSize = window->getRenderTarget(graphicsBackend).getSize();
+        auto &target = window->getRenderTarget(graphicsBackend);
+        auto winSize = target.getSize();
         auto aspectRatio = (float) winSize.x / (float) winSize.y;
 
         Scene s;
@@ -196,9 +200,9 @@ private:
         }
 
         pipeline->getGeometryBuffer().setSamples(4);
-        pipeline->getGeometryBuffer().setSize(window->getRenderTarget(graphicsBackend).getSize());
+        pipeline->getGeometryBuffer().setSize(target.getSize());
 
-        pipeline->render(window->getRenderTarget(graphicsBackend), s);
+        pipeline->render(target, s);
     }
 
     void onMouseMove(double xPos, double yPos) override {
