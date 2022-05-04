@@ -52,6 +52,7 @@ protected:
             viewRotation.x -= deltaTime * mouseDelta.y * 50;
             viewRotation.y -= deltaTime * mouseDelta.x * 50;
         }
+        mouseDelta = {};
 
         drawViewport();
         drawGui();
@@ -179,6 +180,7 @@ private:
         s.camera.type = xengine::PERSPECTIVE;
         s.camera.transform.setPosition({0, 0, viewDistance});
         s.camera.aspectRatio = aspectRatio;
+        s.camera.farClip = 10000;
 
         s.skybox.color = ColorRGBA::blue();
 
@@ -207,7 +209,7 @@ private:
     }
 
     void onMouseWheelScroll(double amount) override {
-        viewDistance -= amount;
+        viewDistance -= amount * 10;
         if (viewDistance < 1) {
             viewDistance = 1;
         } else if (viewDistance > 10000) {
