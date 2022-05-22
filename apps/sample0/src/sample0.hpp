@@ -92,7 +92,7 @@ public:
         imPlotContext = ImPlot::CreateContext();
 
         window->setSwapInterval(0);
-        renderDevice->getRenderer().renderClear(window->getRenderTarget(graphicsBackend), bgColor, 1);
+        renderDevice->getRenderer().renderClear(window->getRenderTarget(), bgColor, 1);
         window->swapBuffers();
 
         ren2d = std::make_unique<Renderer2D>(*renderDevice);
@@ -129,7 +129,7 @@ protected:
 
         audioDevice = AudioDevice::createDevice(xengine::OpenAL);
 
-        renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend),
+        renderSystem = new RenderSystem(window->getRenderTarget(),
                                         *pipeline);
 
         //Move is required because the ECS destructor deletes the system pointers.
@@ -269,7 +269,7 @@ private:
 
         window->update();
 
-        auto &target = window->getRenderTarget(graphicsBackend);
+        auto &target = window->getRenderTarget();
 
         ren2d->renderBegin(target, true, bgColor, {}, target.getSize());
 
@@ -314,7 +314,7 @@ private:
 
     void drawDebugWindow() {
         auto &wnd = *window;
-        auto &target = window->getRenderTarget(graphicsBackend);
+        auto &target = window->getRenderTarget();
         ImGuiCompat::NewFrame(wnd, graphicsBackend);
         ImGui::NewFrame();
         debugWindow.draw();
