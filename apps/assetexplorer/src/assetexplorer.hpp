@@ -31,11 +31,12 @@ public:
     AssetExplorer(int argc, char *argv[])
             : Application(argc, argv) {
         window->setTitle("Asset Explorer");
-        auto passes = std::vector<std::unique_ptr<RenderPass>>();
+        auto passes = std::vector<std::shared_ptr<RenderPass>>();
+        passes.emplace_back(new GBufferPass(*renderDevice));
         passes.emplace_back(new PhongPass(*renderDevice));
-        pipeline = std::make_unique<DeferredPipeline>(*renderDevice, std::move(passes));
-
-        pipeline->getCompositor().setClearColor(ColorRGBA::grey(0.5, 255));
+        passes.emplace_back(new CompositePass(*renderDevice, ColorRGBA::grey(0.5, 255)));
+        pipeline = std::make_unique<FrameGraphPipeline>(*renderDevice);
+        pipeline->setPasses(passes);
 
         window->getInput().addListener(*this);
     }
@@ -72,7 +73,7 @@ private:
     AssetType getType(std::type_index index) {
         if (index == typeid(Mesh)) {
             return MESH;
-        } else if (index == typeid(AssetMaterial)) {
+        } else if (index == typeid(Material)) {
             return MATERIAL;
         } else if (index == typeid(Texture)) {
             return TEXTURE;
@@ -114,18 +115,13 @@ private:
         if (loadAsset) {
             std::ifstream stream(path);
             if (stream.is_open()) {
-                bundle = AssetImporter::import(stream, std::filesystem::path(path).extension());
-                if (bundle.assets.find(typeid(Mesh)) != bundle.assets.end()) {
-                    mesh = renderDevice->getAllocator().createMeshBuffer(bundle.get<Mesh>());
-                }
+                bundle = ResourceImporter().import(stream, std::filesystem::path(path).extension());
+                mesh = renderDevice->getAllocator().createMeshBuffer(bundle.get<Mesh>());
             }
         }
 
         for (auto &pair: bundle.assets) {
-            auto t = getType(pair.first);
-            for (auto &mPair: pair.second) {
-                drawNode(t, mPair.first, *mPair.second.front());
-            }
+            drawNode(pair.first, *pair.second);
         }
 
         ImGui::End();
@@ -138,7 +134,8 @@ private:
                               graphicsBackend);
     }
 
-    void drawNode(AssetType type, const std::string &text, Asset &asset) {
+    void drawNode(const std::string &text, Resource &asset) {
+        auto type = getType(asset.getTypeIndex());
         if (ImGui::TreeNode(text.c_str())) {
             std::string str;
             switch (type) {
@@ -196,12 +193,14 @@ private:
         if (mesh) {
             Material mat;
             mat.diffuse = ColorRGBA::white(0.1);
-            s.nodes.emplace_back(Scene::Node({{}, viewRotation, {1, 1, 1}}, mesh.get(), mat));
+            Scene::Object o(ResourceHandle<Mesh>({}, nullptr, dynamic_cast<Resource *>(mesh.get())),
+                            ResourceHandle<Material>());
+            o.transform = {{}, viewRotation, {1, 1, 1}};
+            s.objects.emplace_back(o);
         }
 
-        pipeline->getGeometryBuffer().setSamples(4);
-        pipeline->getGeometryBuffer().setSize(target.getSize());
-
+        pipeline->setRenderResolution(winSize);
+        pipeline->setRenderSamples(4);
         pipeline->render(target, s);
     }
 
@@ -222,7 +221,9 @@ private:
     }
 
     std::string path;
-    AssetBundle bundle;
+    ResourceBundle bundle;
+
+    Scene scene;
 
     float guiWidth;
 
@@ -234,7 +235,7 @@ private:
     Vec2d mouseDelta;
     Vec2d prevMousePos;
 
-    std::unique_ptr<DeferredPipeline> pipeline;
+    std::unique_ptr<FrameGraphPipeline> pipeline;
 };
 
 #endif //XSAMPLES_ASSETEXPLORER_HPP

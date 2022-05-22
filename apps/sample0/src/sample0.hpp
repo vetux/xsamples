@@ -88,7 +88,7 @@ public:
     Sample0(int argc, char *argv[])
             : Application(argc,
                           argv),
-                          archive(std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")){
+              archive(std::make_unique<DirectoryArchive>(std::filesystem::current_path().string() + "/assets")) {
         imPlotContext = ImPlot::CreateContext();
 
         window->setSwapInterval(0);
@@ -111,32 +111,25 @@ protected:
 
         textRenderer = std::make_unique<TextRenderer>(*font, *renderDevice);
 
-        assetManager = std::make_unique<AssetManager>(*archive);
-        assetRenderManager = std::make_unique<AssetRenderManager>(*assetManager, renderDevice->getAllocator());
+        ResourceRegistry::getDefaultRegistry().setArchive(archive);
 
-        std::vector<std::unique_ptr<RenderPass>> passes;
-        drawLoadingScreen(0.1, "Loading Passes...");
-        passes.emplace_back(std::move(std::make_unique<SkyboxPass>(*renderDevice)));
-        drawLoadingScreen(0.2, "Loading Passes...");
-        passes.emplace_back(std::move(std::make_unique<PhongPass>(*renderDevice)));
-        drawLoadingScreen(0.3, "Loading Passes...");
-        passes.emplace_back(std::move(std::make_unique<ForwardPass>(*renderDevice)));
-        drawLoadingScreen(0.4, "Loading Passes...");
-        passes.emplace_back(std::move(std::make_unique<DebugPass>(*renderDevice)));
-        drawLoadingScreen(0.5, "Loading Passes...");
+        drawLoadingScreen(0.1, "Setting up render passes...");
 
-        pipeline = std::make_unique<DeferredPipeline>(*renderDevice,
-                                                      std::move(passes));
+        std::vector<std::shared_ptr<RenderPass>> passes;
+        passes.emplace_back(std::move(std::make_shared<GBufferPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_shared<SkyboxPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_shared<PhongPass>(*renderDevice)));
+        passes.emplace_back(std::move(std::make_shared<CompositePass>(*renderDevice)));
+
+        pipeline = std::make_unique<FrameGraphPipeline>(*renderDevice);
+
+        pipeline->setPasses(std::move(passes));
 
         drawLoadingScreen(0.6, "Initializing Systems...");
 
         audioDevice = AudioDevice::createDevice(xengine::OpenAL);
 
         renderSystem = new RenderSystem(window->getRenderTarget(graphicsBackend),
-                                        *renderDevice,
-                                        *archive,
-                                        *assetManager,
-                                        *assetRenderManager,
                                         *pipeline);
 
         //Move is required because the ECS destructor deletes the system pointers.
@@ -144,7 +137,7 @@ protected:
                 {
                         new PlayerInputSystem(window->getInput()),
                         new TransformAnimationSystem(),
-                        new AudioSystem(*audioDevice, *assetManager),
+                        new AudioSystem(*audioDevice, ResourceRegistry::getDefaultRegistry()),
                         renderSystem
                 }
         ));
@@ -221,8 +214,8 @@ protected:
         debugWindow.setFrameBufferSize(wnd.getFramebufferSize());
         debugWindow.setVideoModes(display.getPrimaryMonitor()->getSupportedVideoModes());
 
-        pipeline->getGeometryBuffer().setSamples(debugWindow.getSamples());
-        pipeline->getGeometryBuffer().setSize(debugWindow.getRenderResolution());
+        pipeline->setRenderSamples(debugWindow.getSamples());
+        pipeline->setRenderResolution(debugWindow.getRenderResolution());
 
         wnd.setSwapInterval(debugWindow.getSwapInterval());
 
@@ -232,8 +225,6 @@ protected:
 
         if (showDebugWindow)
             drawDebugWindow();
-
-        dynamic_cast<DebugPass &>(*(pipeline->getPasses().end() - 1)->get()).setEnabled(debugWindow.getDrawDebug());
 
         drawCalls = renderDevice->getRenderer().debugDrawCallRecordStop();
 
@@ -280,7 +271,7 @@ private:
 
         auto &target = window->getRenderTarget(graphicsBackend);
 
-        ren2d->renderBegin(target, true, {}, target.getSize(), bgColor);
+        ren2d->renderBegin(target, true, bgColor, {}, target.getSize());
 
         auto targetSize = target.getSize();
         auto targetHalfSize = targetSize / 2;
@@ -349,10 +340,9 @@ private:
     bool showDebugWindow = false;
     DebugWindow debugWindow;
 
-    std::unique_ptr<AssetManager> assetManager;
-    std::unique_ptr<AssetRenderManager> assetRenderManager;
+    std::unique_ptr<ResourceRegistry> resourceRegistry;
 
-    std::unique_ptr<DeferredPipeline> pipeline;
+    std::unique_ptr<FrameGraphPipeline> pipeline;
     std::unique_ptr<Renderer2D> ren2d;
 
     ColorRGBA bgColor = {38, 38, 38, 255};
@@ -362,7 +352,7 @@ private:
     std::unique_ptr<Font> font;
     std::unique_ptr<TextRenderer> textRenderer;
 
-    std::unique_ptr<Archive> archive;
+    std::shared_ptr<Archive> archive;
 };
 
 #endif //MANA_SAMPLEAPPLICATION_HPP
