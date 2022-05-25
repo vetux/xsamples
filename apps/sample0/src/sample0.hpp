@@ -127,8 +127,6 @@ protected:
 
         drawLoadingScreen(0.6, "Initializing Systems...");
 
-        audioDevice = AudioDevice::createDevice(xengine::OpenAL);
-
         renderSystem = new RenderSystem(window->getRenderTarget(),
                                         *pipeline);
 
@@ -212,7 +210,7 @@ protected:
         debugWindow.setDrawCalls(drawCalls);
         debugWindow.setPolyCount(renderSystem->getPolyCount());
         debugWindow.setFrameBufferSize(wnd.getFramebufferSize());
-        debugWindow.setVideoModes(display.getPrimaryMonitor()->getSupportedVideoModes());
+        debugWindow.setVideoModes(displayDriver->getPrimaryMonitor()->getSupportedVideoModes());
 
         pipeline->setRenderSamples(debugWindow.getSamples());
         pipeline->setRenderResolution(debugWindow.getRenderResolution());
@@ -231,7 +229,7 @@ protected:
         fpsLimit = debugWindow.getFpsLimit();
 
         if (debugWindow.getFullScreen()) {
-            auto mon = display.getPrimaryMonitor();
+            auto mon = displayDriver->getPrimaryMonitor();
             auto mode = mon->getSupportedVideoModes().at(debugWindow.getSelectedVideoMode());
             wnd.setMonitor(*mon, Recti({}, {mode.width, mode.height}), mode.refreshRate);
         } else {
@@ -315,14 +313,13 @@ private:
     void drawDebugWindow() {
         auto &wnd = *window;
         auto &target = window->getRenderTarget();
-        ImGuiCompat::NewFrame(wnd, graphicsBackend);
+        ImGuiCompat::NewFrame(wnd);
         ImGui::NewFrame();
         debugWindow.draw();
         ImGui::Render();
         ImGuiCompat::DrawData(wnd,
                               target,
-                              RenderOptions({}, target.getSize(), false, false, 1, {}, 1, false, false, false),
-                              graphicsBackend);
+                              RenderOptions({}, target.getSize(), false, false, 1, {}, 1, false, false, false));
     }
 
 private:
@@ -333,9 +330,10 @@ private:
     unsigned long drawCalls = 0;// The number of draw calls in the last update
 
     RenderSystem *renderSystem{};
-    std::unique_ptr<AudioDevice> audioDevice;
 
     int fullscreeenIndex = 0;
+
+    float fpsLimit = 0;
 
     bool showDebugWindow = false;
     DebugWindow debugWindow;
